@@ -23,7 +23,10 @@ x-n8n: &service-n8n
     - LANGCHAIN_TRACING_V2
     - LANGCHAIN_API_KEY
     - LANGCHAIN_PROJECT
+    - CLOUDFLARED_TOKEN
     - WEBHOOK_URL
+    - HOME=/home/node
+    - WORKFLOW_GIT_DIR
     - NODE_FUNCTION_ALLOW_BUILTIN=*
     - NODE_FUNCTION_ALLOW_EXTERNAL=*
   links:
@@ -69,6 +72,7 @@ services:
 
   n8n-import:
     <<: *service-n8n
+    image: n8n-with-psql
     container_name: n8n-import
     entrypoint: /bin/sh
     command:
@@ -82,8 +86,10 @@ services:
 
   n8n:
     <<: *service-n8n
+    image: n8n-with-psql
     container_name: n8n
     restart: unless-stopped
+    networks: ['demo']
     ports:
       - 5678:5678
     volumes:
@@ -132,3 +138,10 @@ services:
     <<: *init-ollama
     depends_on:
       - ollama-gpu
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN}
+    container_name: Tunnel
+    networks: ['demo']
+    restart: unless-stopped

@@ -1,0 +1,789 @@
+{
+  "name": "Check Calendar for availability",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "6a4f69e7-5b08-49b8-9e00-3829fb78b1a5",
+      "name": "When clicking ‘Test workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        640,
+        800
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "### Get all query outlook events for the next month and extract relevant data",
+        "height": 282.7895842177344,
+        "width": 1293.5392668055918
+      },
+      "id": "9f0d64c4-a752-4318-be74-108c520261bf",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        890.9557713750212,
+        420
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "={{ $json.value[0].scheduleItems }}",
+        "options": {}
+      },
+      "id": "b68bcec6-ac84-4625-ab62-d757562bb348",
+      "name": "Split Out array of events",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1580,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "de0efe4b-e8f9-42ea-822e-266783a9b0a8",
+      "name": "Loop Over events array",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1960,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "start",
+              "value": "={{ $json.start.dateTime }}"
+            },
+            {
+              "name": "end",
+              "value": "={{ $json.end.dateTime }}"
+            },
+            {
+              "name": "name",
+              "value": "={{ $json.subject}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "be1ad8a2-4254-4b6a-9674-515fe05eb998",
+      "name": "Extract each event data",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        2100,
+        460
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "value2": "busy"
+            }
+          ]
+        }
+      },
+      "id": "5133cd5a-4244-46ec-b7cb-21e03f7f6c1b",
+      "name": "Filter only busy events",
+      "type": "n8n-nodes-base.filter",
+      "position": [
+        1760,
+        460
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "68f3dc0a-5d4b-4429-952c-8fbf7fc69d74",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3560,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75af4b02-43b0-484c-bca2-3ae8f4680674",
+              "name": "value[0].workingHours",
+              "value": "={{ $json.value[0].workingHours }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d178b435-073f-4358-bd42-e70bfe8acfd4",
+      "name": "Get working hours",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1300,
+        620
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "notesInFlow": true,
+      "notes": "UNKNOWN WHY THIS NEEDED"
+    },
+    {
+      "parameters": {
+        "jsCode": "const { DateTime } = require('luxon');\n\nconst nodeOutput = $('Get working hours').all();\n\n// Provided working hours and days\nconst workingDays = nodeOutput[0].json.value[0].workingHours.daysOfWeek;\n\nconst workingHoursStart = nodeOutput[0].json.value[0].workingHours.startTime;\nconst workingHoursEnd = nodeOutput[0].json.value[0].workingHours.endTime;\nconst timeZone = \"America/Chicago\";\n//const timeZone = nodeOutput[0].json.value[0].workingHours.timeZone.name; \nconsole.log(timeZone);\n\n// TODO these need to be not hard coded\n// Define the date range\n// Define the date range\nconst startDate = DateTime.fromISO(\"2024-09-04\", { zone: timeZone });\nconst endDate = DateTime.fromISO(\"2024-10-04\", { zone: timeZone });\n\n// Array to hold busy events in ISO format\nlet busyEvents = [];\n\n// Iterate over the date range\nlet currentDate = startDate;\nwhile (currentDate <= endDate) {\n    const dayOfWeek = currentDate.toFormat('cccc').toLowerCase();\n    \n    if (!workingDays.includes(dayOfWeek)) {\n        // If it's not a working day, create a full-day busy event\n        busyEvents.push({\n            start: DateTime.fromISO(currentDate.toISODate() + \"T00:00:00\", { zone: timeZone }).toISO(),\n            end: DateTime.fromISO(currentDate.toISODate() + \"T23:59:59\", { zone: timeZone }).toISO(),\n            name: \"Non-working hours\"\n        });\n    } else {\n        // Non-working hours for working days\n        busyEvents.push({\n            start: DateTime.fromISO(currentDate.toISODate() + \"T00:00:00\", { zone: timeZone }).toISO(),\n            end: DateTime.fromISO(currentDate.toISODate() + \"T\" + workingHoursStart, { zone: timeZone }).toISO(),\n            name: \"Non-working hours\"\n        });\n        \n        busyEvents.push({\n            start: DateTime.fromISO(currentDate.toISODate() + \"T\" + workingHoursEnd, { zone: timeZone }).toISO(),\n            end: DateTime.fromISO(currentDate.toISODate() + \"T23:59:59\", { zone: timeZone }).toISO(),\n            name: \"Non-working hours\"\n        });\n    }\n    \n    // Move to the next day\n    currentDate = currentDate.plus({ days: 1 });\n}\nconsole.log(\"busyEvents\");\nconsole.log(busyEvents);\nreturn busyEvents;\n"
+      },
+      "id": "d90848b4-a133-4557-81c3-347eede94217",
+      "name": "make non working hours busy events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Find available Time lots and send them back to calling agent",
+        "height": 234.94446059718356,
+        "width": 1224.5683338642882
+      },
+      "id": "1a775b01-9b7d-422d-a0b7-38b106fe9aef",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        700
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e913542f-5a0c-46d5-87ef-862aa273a963",
+      "name": "Execution Data",
+      "type": "n8n-nodes-base.executionData",
+      "typeVersion": 1,
+      "position": [
+        880,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/calendar/getSchedule",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"schedules\": [\"justin-elliott@outlook.com\"],\n  \"startTime\": {\n    \"dateTime\": \"{{ $today.format('yyyy-MM-dd') }}\",\n    \"timeZone\": \"UTC\"\n  },\n  \"endTime\": {\n    \"dateTime\": \"{{ $today.plus(1,\"month\").format('yyyy-MM-dd') }}\",\n    \"timeZone\": \"UTC\"\n  },\n  \"availabilityViewInterval\": 30\n}",
+        "options": {}
+      },
+      "id": "c1adf3c3-c313-4d60-afe9-4f8e29cde272",
+      "name": "Get outlook schedule",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1060,
+        480
+      ],
+      "executeOnce": true,
+      "retryOnFail": false,
+      "notesInFlow": true,
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "I1PYOiHNkb8wCSyU",
+          "name": "Microsoft Outlook account"
+        }
+      },
+      "notes": "Schedule through next month"
+    },
+    {
+      "parameters": {
+        "operation": "sort",
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "start"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "298a8f34-adea-44de-9e74-bb879de82a01",
+      "name": "Sort by start datetime",
+      "type": "n8n-nodes-base.itemLists",
+      "position": [
+        2280,
+        760
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "jsCode": "const { DateTime } = require('luxon');\n\n// Function to find available time slots\nfunction findAvailableSlots(calendarEvents, meetingDuration, bufferDuration) {\n    let availableSlots = [];\n\n  \n    for (let i = 1; i < calendarEvents.length; i++) {\n        \n        const prevEventEnd = DateTime.fromISO(calendarEvents[i - 1].end, { setZone: true });\n        const nextEventStart = DateTime.fromISO(calendarEvents[i].start, { setZone: true });\n      \n        const gap = nextEventStart.diff(prevEventEnd, 'hours').hours;\n\n        //Using *2 b/c you need to account for a buffer after last meeting an 1 hour before next\n        if (gap >= (meetingDuration + (2*bufferDuration))) {\n\n          let availableTimeSlot = {\n                day: prevEventEnd.weekdayLong,\n                start: prevEventEnd.plus({ hours: bufferDuration }).toISO({ setZone: true }),\n                end: nextEventStart.minus({ hours: bufferDuration }).toISO({ setZone: true }),\n                name: \"Available Time Slot\"\n            }\n            console.log(availableTimeSlot);\n            availableSlots.push(availableTimeSlot);\n        }\n    }\n\n    return availableSlots;\n}\n\n// Parse the calendar events and sort them by start time\n//const calendarEvents = $json.CalendarEvents.sort((a, b) => DateTime.fromISO(a.start) - DateTime.fromISO(b.start));\n\nlet calendarEvents = $input.all();\ncalendarEvents = calendarEvents[0].json.CalendarEvents;\n//const calendarEvents = $json.CalendarEvents;\n//console.log(calendarEvents);\n// Define meeting duration (1 hour) and buffer duration (1 hour)\nconst meetingDuration = 1;\nconst bufferDuration = 1;\n// Find available slots\nconst availableSlots = findAvailableSlots(calendarEvents, meetingDuration, bufferDuration);\nconsole.log(availableSlots);\n\nreturn availableSlots;\n"
+      },
+      "id": "447273a8-e892-4c45-97d0-102f77b3fa2b",
+      "name": "Derive availability",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2660,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "concatenateItems",
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "CalendarEvents",
+        "options": {}
+      },
+      "id": "5cd922b4-199c-4a8d-8539-0b84806b9477",
+      "name": "merge busy events into array",
+      "type": "n8n-nodes-base.itemLists",
+      "position": [
+        2480,
+        760
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "operation": "concatenateItems",
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "AllAvailability",
+        "options": {}
+      },
+      "id": "65e3623e-f160-4f6d-8c58-c42d09053b91",
+      "name": "Merge non-busy events into array",
+      "type": "n8n-nodes-base.itemLists",
+      "position": [
+        2840,
+        760
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"results\": []\n}",
+        "options": {}
+      },
+      "id": "02841f65-dc5f-4fdc-8190-f209d85a9f6c",
+      "name": "Set webhook response vars - Botpress",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3260,
+        940
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "996e8c16-dcf2-4bb7-8b63-2302fafd5c75",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2100,
+        760
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e01d283f-4027-46e4-8262-f19a540171dd",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        640,
+        640
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"results\": [\n    {\n      \"toolCallId\": \n                 \"{{ $node['Vapi hook - check calendar'].json.body.message.toolCalls[0].id }}\",\n      \"result\": {{ $json }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "83300c80-57e3-4a74-9b2f-48298815179a",
+      "name": "Set webhook response vars - Vapi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3260,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# FYI\n\n[Reference to MVP notion definition](https://www.notion.so/justincredible/MVP-1-Purpose-Definition-and-Goal-first-iteration-10e0a2ebb70280a0904fe84feb2ec1cc)\n\n[Reference for getting outlook availability](https://learn.microsoft.com/en-us/graph/api/calendar-getschedule?view=graph-rest-1.0&tabs=http)\n\nMicrosoft graph API has a [“find meeting times”](https://graph.microsoft.com/v1.0/me/findMeetingTimes) API that might work best versus the logic that I have in this N8N workflow\n\nBut, the find meeting time will only work with business or school account. So this wouldnt be able to be used for all scenarios.\n\n",
+        "height": 354.8717948717949,
+        "width": 566.1538461538462,
+        "color": 3
+      },
+      "id": "04850551-6e10-42ca-a299-1e698e553bf9",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log(\"THIS IS MY TEST CONSOLE OUTPUT!!!!!!!!!!!!!!!!!\")\nconsole.log($input.all());\n\nconst response = \n  {\n    \"response\": $('Switch').all()\n  };\n\nreturn response;"
+      },
+      "id": "7c0a0ed3-f367-4e52-991e-b63f3ef41a18",
+      "name": "Test output - Call from n8n",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3260,
+        780
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "webhooks still need authorization\n"
+      },
+      "id": "bf21e388-e580-4082-9b7f-2377d7195411",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        940,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "f3e2ae2f-5345-4e2a-9474-0aca0169cc2d",
+              "leftValue": "={{ $json.value[0].scheduleItems }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c20d41ab-56d3-4480-9508-728a82a9eb57",
+      "name": "Check IF calendar events",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "609e4f41-a2ab-4a02-b08d-922bef9efd53",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "21da9c09-4376-4a2f-bea9-f0af46d571a5",
+      "name": "Botpress Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        640,
+        460
+      ],
+      "webhookId": "609e4f41-a2ab-4a02-b08d-922bef9efd53"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Execution Data').item.json.webhookUrl }}",
+                    "rightValue": "={{  \"82eed60d-dc62-4aa6-84a2-bc429073ff4c\"}}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vapi"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "010bfe2d-84f2-428d-8834-38e6d2633fea",
+                    "leftValue": "={{ $('Execution Data').item.json.webhookUrl }}",
+                    "rightValue": "={{ \"609e4f41-a2ab-4a02-b08d-922bef9efd53\" }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Botpress"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "43dc2b24-9685-4c80-8051-8dadd7fa11b0",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        3000,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "82eed60d-dc62-4aa6-84a2-bc429073ff4c",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7e03497b-6c09-4342-989f-38c5e350ee9d",
+      "name": "Vapi hook - check calendar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ],
+      "webhookId": "82eed60d-dc62-4aa6-84a2-bc429073ff4c"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Split Out array of events": {
+      "main": [
+        [
+          {
+            "node": "Filter only busy events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over events array": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract each event data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract each event data": {
+      "main": [
+        [
+          {
+            "node": "Loop Over events array",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter only busy events": {
+      "main": [
+        [
+          {
+            "node": "Loop Over events array",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get working hours": {
+      "main": [
+        [
+          {
+            "node": "make non working hours busy events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "make non working hours busy events": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Execution Data": {
+      "main": [
+        [
+          {
+            "node": "Get outlook schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get outlook schedule": {
+      "main": [
+        [
+          {
+            "node": "Get working hours",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check IF calendar events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort by start datetime": {
+      "main": [
+        [
+          {
+            "node": "merge busy events into array",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Derive availability": {
+      "main": [
+        [
+          {
+            "node": "Merge non-busy events into array",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "merge busy events into array": {
+      "main": [
+        [
+          {
+            "node": "Derive availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge non-busy events into array": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set webhook response vars - Botpress": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Sort by start datetime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set webhook response vars - Vapi": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test output - Call from n8n": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check IF calendar events": {
+      "main": [
+        [
+          {
+            "node": "Split Out array of events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Botpress Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execution Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Set webhook response vars - Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set webhook response vars - Botpress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vapi hook - check calendar": {
+      "main": [
+        [
+          {
+            "node": "Execution Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Chicago",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "kY5Frx3HZtDwdX7A"
+  },
+  "versionId": "2fc6289b-1f68-41a4-aa5a-f02574960f6c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "oT1iAcQJUlD7KOEb",
+  "tags": [
+    {
+      "createdAt": "2024-09-05T02:13:35.484Z",
+      "updatedAt": "2024-09-05T02:13:35.484Z",
+      "id": "GpCc3wHVRIlBpgoP",
+      "name": "MVP"
+    },
+    {
+      "createdAt": "2024-09-06T18:25:24.612Z",
+      "updatedAt": "2024-09-06T18:25:24.612Z",
+      "id": "pADKHPHiIUBXmdDf",
+      "name": "In Progress"
+    }
+  ]
+}

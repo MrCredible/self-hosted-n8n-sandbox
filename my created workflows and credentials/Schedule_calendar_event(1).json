@@ -1,0 +1,499 @@
+{
+  "name": "Schedule calendar event",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "46b1e23c-9bd6-497c-9f89-6c3fb0c56c19",
+      "name": "When clicking ‘Test workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        640,
+        640
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendarId": {
+          "__rl": true,
+          "value": "AQMkADAwATNiZmYAZC1kMjIANy1mM2VmLTAwAi0wMAoARgAAA6ppL6Vrf0xIl0Y_LfW97PIHAD4Z6lGx_BxMuHCzaZgxIKQAAAIBBgAAAD4Z6lGx_BxMuHCzaZgxIKQAB2tiJ5QAAAA=",
+          "mode": "list",
+          "cachedResultName": "Faux Test Calendar"
+        },
+        "subject": "={{ $json.query.event_title }}",
+        "startDateTime": "={{ $json.query.event_start_datetime }}",
+        "endDateTime": "={{ $json.query.event_end_datetime }}",
+        "additionalFields": {}
+      },
+      "id": "13510f3d-ec62-428d-8f08-686c55371c45",
+      "name": "Microsoft Outlook",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1420,
+        460
+      ],
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "I1PYOiHNkb8wCSyU",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "170d7723-f3b2-4649-b200-a51bcf97b5b1",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2260,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://graph.microsoft.com/v1.0/me/calendar/events/{{$json.id}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "attendees",
+              "value": "={{ $('Fetch Event Details - Vapi').item.json.query.attendees }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0a69338b-38d9-41cb-8173-20aac5b38bdb",
+      "name": "Patch event attendees",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1620,
+        460
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "I1PYOiHNkb8wCSyU",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "These nodes are repeated in other workflows. It might make sense to make them their own workflow.",
+        "height": 570.1382202988946,
+        "width": 654.5013928552656
+      },
+      "id": "b14cdc8a-b5f5-4cf6-b5d5-3430f3aa87fa",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1740,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# FYI\n\n[Reference to MVP notion definition](https://www.notion.so/justincredible/MVP-1-Purpose-Definition-and-Goal-first-iteration-10e0a2ebb70280a0904fe84feb2ec1cc)\n\n[Reference for getting outlook availability](https://learn.microsoft.com/en-us/graph/api/calendar-getschedule?view=graph-rest-1.0&tabs=http)\n\nMicrosoft graph API has a [“find meeting times”](https://graph.microsoft.com/v1.0/me/findMeetingTimes) API that might work best versus the logic that I have in this N8N workflow\n\nBut, the find meeting time will only work with business or school account. So this wouldnt be able to be used for all scenarios.\n\n",
+        "height": 273.2728133789578,
+        "width": 566.1538461538462,
+        "color": 6
+      },
+      "id": "f50c0424-4b1a-4a8b-8a47-bb1d343abb94",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        860,
+        -120
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "bfa7fe8b-31af-466c-8681-26b3e2540dbb",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        640,
+        420
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {},
+      "id": "f6072a6c-1341-4fb1-96af-8d685395eef2",
+      "name": "Execution Data",
+      "type": "n8n-nodes-base.executionData",
+      "typeVersion": 1,
+      "position": [
+        960,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"results\": [\n    {\n      \"toolCallId\": \n                 \"{{ $node['Vapi Webhook'].json.body.message.toolCalls[0].id }}\",\n      \"result\": {{ $json }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "0d693971-e152-4d7e-84b0-c8f56c844194",
+      "name": "Set webhook response vars - Vapi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1980,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"results\": []\n}",
+        "options": {}
+      },
+      "id": "e11b336f-914f-43d8-bf2a-2a2580e8da99",
+      "name": "Set webhook response vars - Botpress",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Instead of trying to get exact details, i should leverage LLM more to get information out, otherwise it will take me forever to solve things\n",
+        "height": 227.35394217478546
+      },
+      "id": "39781095-86ac-4a74-9f1d-0c55cac0476d",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\"query\": {\n  \"LeadEmail\": \"{{ $json.body.message.toolCalls[0].function.arguments.LeadEmail }}\",\n  \"event_start_datetime\":\"{{ $json.body.message.toolCalls[0].function.arguments.event_start_datetime }}\",\n  \"event_end_datetime\":\"{{ $json.body.message.toolCalls[0].function.arguments.event_end_datetime }}\",\n  \"event_title\": \"{{ $json.body.message.toolCalls[0].function.arguments.event_title }}\",\n  \"attendees\":[\n    {\"emailAddress\":{\n      \"address\": \"{{ $json.body.message.toolCalls[0].function.arguments.LeadEmail }}\",\n      \"name\":  \"{{ $json.body.message.toolCalls[0].function.arguments.LeadName }}\"\n    }}\n  ]\n}}\n",
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "id": "e4cf6001-d3e1-4cbb-ba9f-fed451dc115d",
+      "name": "Fetch Event Details - Vapi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1300,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "content": "webhooks still need authorization\n",
+        "height": 415.6084360088447,
+        "width": 210.68140813726336,
+        "color": 3
+      },
+      "id": "8f49a7c5-3247-47be-9878-271dbef1e929",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        580,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "content": "We use PATCH here since by default the calendar owner is part of the meeting",
+        "height": 217.09409994322408,
+        "width": 161.30272710528578,
+        "color": 4
+      },
+      "id": "4208a110-7a82-4309-95c1-78edfc8203a2",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1580,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Execution Data').item.json.webhookUrl }}",
+                    "rightValue": "={{  \"9847ba33-ef43-4b33-aadf-4a816704d85f\"}}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vapi"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "010bfe2d-84f2-428d-8834-38e6d2633fea",
+                    "leftValue": "={{ $('Execution Data').item.json.webhookUrl }}",
+                    "rightValue": "={{ \"609e4f41-a2ab-4a02-b08d-922bef9efd53\" }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Botpress"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "720afca0-c545-4fb0-bef5-2c06fdefb63e",
+      "name": "Switch1",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1780,
+        460
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "b17f3739-e25c-4e11-b691-8576e1b025eb",
+      "name": "Execution Data1",
+      "type": "n8n-nodes-base.executionData",
+      "typeVersion": 1,
+      "position": [
+        960,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "9847ba33-ef43-4b33-aadf-4a816704d85f",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ed77a449-66db-435b-93a3-3a5ff3d4f950",
+      "name": "Vapi Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        640,
+        260
+      ],
+      "webhookId": "9847ba33-ef43-4b33-aadf-4a816704d85f"
+    },
+    {
+      "parameters": {
+        "content": "I have these 2 'execution data' nodes, b/c some reason if another node is between the webhook and the execution node, then the execution node does not save all the webhook message details.\n\nThere is probably a better way to solve this.",
+        "height": 477.02803816752476
+      },
+      "id": "359cd17a-328a-4a67-aec0-b52203ea1f59",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        244.78025288765684
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Microsoft Outlook": {
+      "main": [
+        [
+          {
+            "node": "Patch event attendees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Patch event attendees": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execution Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execution Data": {
+      "main": [
+        [
+          {
+            "node": "Fetch Event Details - Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "Execution Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set webhook response vars - Vapi": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set webhook response vars - Botpress": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Event Details - Vapi": {
+      "main": [
+        [
+          {
+            "node": "Microsoft Outlook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Set webhook response vars - Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set webhook response vars - Botpress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execution Data1": {
+      "main": [
+        [
+          {
+            "node": "Microsoft Outlook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vapi Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execution Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3e2e9e34-f94a-4abe-90c1-ad1d037aa9d8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "hnayyVKdmVVCJd96",
+  "tags": [
+    {
+      "createdAt": "2024-09-05T02:13:35.484Z",
+      "updatedAt": "2024-09-05T02:13:35.484Z",
+      "id": "GpCc3wHVRIlBpgoP",
+      "name": "MVP"
+    },
+    {
+      "createdAt": "2024-09-06T18:25:24.612Z",
+      "updatedAt": "2024-09-06T18:25:24.612Z",
+      "id": "pADKHPHiIUBXmdDf",
+      "name": "In Progress"
+    }
+  ]
+}

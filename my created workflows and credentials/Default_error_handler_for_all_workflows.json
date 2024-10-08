@@ -1,0 +1,472 @@
+{
+  "name": "Default error handler for all workflows",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d46a710d-0d0e-4040-b2b2-a2bd2e2410ff",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "position": [
+        440,
+        634.1688633602625
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "workflowObject": "={{ JSON.stringify($json) }}",
+        "requestOptions": {}
+      },
+      "id": "44713be9-786a-4bff-b562-a23146792995",
+      "name": "n8n | update",
+      "type": "n8n-nodes-base.n8n",
+      "position": [
+        1500,
+        294.1688633602625
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $json\n\ndata.settings.errorWorkflow = $('Get this workflow ID').item.json.id ;\ndelete data.settings.callerPolicy;\n\nreturn {\n  id: data.id,\n  name: data.name,\n  nodes: data.nodes,\n  connections: data.connections,\n  settings: data.settings\n}"
+      },
+      "id": "be27247a-71e5-4204-9c7c-2692d8a82c8b",
+      "name": "set fields",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1340,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "content": "## Default Error Handler\n\nUpdate this to your preferred notification mechanism",
+        "height": 308.64949804469416,
+        "width": 483.4744075807993
+      },
+      "id": "d8774911-f4b2-4198-838b-2d0b89002e25",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        380,
+        514.1688633602625
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "id": "fabb0db7-7364-4349-8563-952c9f0e07b2",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        440,
+        294.1688633602625
+      ],
+      "typeVersion": 1.2,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "Runs every day at midnight to update new workflows",
+        "height": 219.7116384468202,
+        "width": 214.6984582852457
+      },
+      "id": "dd1e0036-1093-4160-adad-ed1b0c1b3548",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        380,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "toRecipients": "justin-elliott@outlook.com",
+        "subject": "=N8N ERROR: {{ $('Error Trigger').item.json.workflow.name }}",
+        "bodyContent": "=Workflow Error: {{ $('Error Trigger').item.json.execution.url }}\nError: {{ $('Error Trigger').item.json.execution.error }}\nNum of Retries: {{ $('Error Trigger').item.json.execution.retryOf }}\n",
+        "additionalFields": {}
+      },
+      "id": "3a17f945-d7ca-4c8f-9644-d5388d25f08a",
+      "name": "Microsoft Outlook",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        640
+      ],
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "I1PYOiHNkb8wCSyU",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $workflow.id }}"
+        },
+        "requestOptions": {}
+      },
+      "id": "25ed8ec8-2c28-498a-a951-c5ef1b2a2c59",
+      "name": "Get this workflow ID",
+      "type": "n8n-nodes-base.n8n",
+      "position": [
+        660,
+        294.1688633602625
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "n8nApi": {
+          "id": "wjok9DpSYADCGUSe",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "filters": {},
+        "requestOptions": {}
+      },
+      "id": "2e3a9cf6-9a9f-4f11-ab53-e3fa9c393e1f",
+      "name": "Get list of all workflows",
+      "type": "n8n-nodes-base.n8n",
+      "position": [
+        900,
+        294.1688633602625
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "n8nApi": {
+          "id": "wjok9DpSYADCGUSe",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "0dfdf08f-1810-466d-826f-d25e74da8662",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "={{ $('Get this workflow ID').item.json.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "1e715867-2562-43a4-b4d8-fa0eb7f0f578",
+              "leftValue": "={{ $json.active }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "968234a9-6c35-4800-a334-117560d1f5bc",
+      "name": "Get active workflows (filter inactive)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## CAUTION\n* This template (while was modified in n8n community months ago) does seem to line up with current version of n8n.\n* Unsure exactly what author was trying to do.\n* ill fix this for default error handler later.",
+        "height": 250.07268045358649,
+        "width": 263.94337075348506,
+        "color": 3
+      },
+      "id": "ceaaa8b7-6fc9-4ec6-925c-f39fba708e5d",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "execution",
+        "operation": "get",
+        "executionId": "={{ $json.execution.id }}",
+        "options": {
+          "activeWorkflows": true
+        },
+        "requestOptions": {}
+      },
+      "id": "beac59c5-228e-4f4c-b998-77b5668672b4",
+      "name": "Get Execution Data",
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [
+        600,
+        640
+      ],
+      "credentials": {
+        "n8nApi": {
+          "id": "wjok9DpSYADCGUSe",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "={{ $json.toJsonString() }}",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "id": "c4a4bc65-9cb3-497c-b79b-633db00a00c2",
+      "name": "Convert to File",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        640
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c4a6b28c-6b2d-44d7-8405-4cb8457d317b",
+              "name": "data",
+              "value": "={{ JSON.stringify( $json.data )}}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "549d9417-8452-4fb6-99b9-57383b5eaee8",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        640
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = JSON.stringify($input.all()); // Get the content from the previous Set node\nconst buffer = Buffer.from(content, 'utf-8'); // Convert to buffer for binary format\nreturn [\n  {\n    binary: {\n      data: {\n        data: buffer,\n        mimeType: 'text/plain',\n        fileName: 'output.txt',\n      },\n    },\n  },\n];\n"
+      },
+      "id": "1309d754-2501-449e-85fa-bf6eba9c3693",
+      "name": "Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        800
+      ],
+      "disabled": true
+    }
+  ],
+  "pinData": {
+    "Error Trigger": [
+      {
+        "json": {
+          "execution": {
+            "id": 694,
+            "url": "https://n8n.innocred.co/execution/workflow/1/231",
+            "retryOf": "34",
+            "error": {
+              "message": "Example Error Message",
+              "stack": "Stacktrace"
+            },
+            "lastNodeExecuted": "Node With Error",
+            "mode": "manual"
+          },
+          "workflow": {
+            "id": "1",
+            "name": "Example Workflow"
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "set fields": {
+      "main": [
+        [
+          {
+            "node": "n8n | update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Execution Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get this workflow ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get this workflow ID": {
+      "main": [
+        [
+          {
+            "node": "Get list of all workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get list of all workflows": {
+      "main": [
+        [
+          {
+            "node": "Get active workflows (filter inactive)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get active workflows (filter inactive)": {
+      "main": [
+        [
+          {
+            "node": "set fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Execution Data": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Microsoft Outlook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Microsoft Outlook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8f40f2fc-b467-4a4d-90ec-700d1f431842",
+  "meta": {
+    "templateId": "2312",
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "kY5Frx3HZtDwdX7A",
+  "tags": [
+    {
+      "createdAt": "2024-09-05T02:13:35.484Z",
+      "updatedAt": "2024-09-05T02:13:35.484Z",
+      "id": "GpCc3wHVRIlBpgoP",
+      "name": "MVP"
+    },
+    {
+      "createdAt": "2024-09-06T18:25:24.612Z",
+      "updatedAt": "2024-09-06T18:25:24.612Z",
+      "id": "pADKHPHiIUBXmdDf",
+      "name": "In Progress"
+    }
+  ]
+}
